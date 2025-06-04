@@ -1,0 +1,26 @@
+.opb-flex-row {
+	display: flex;
+}
+.opb-flex-col {
+	display: flex;
+	flex-direction: column;
+}
+.opb-flex-justify-between {
+	justify-content: space-between;
+}
+.opb-flex-align-center {
+	align-items: center;
+}
+.opb-flex-grow {
+	flex-grow: 1;
+}
+
+.opb-root {
+	padding: 8px;
+}
+.opb-root .opb-leaf {
+	margin: 8px;
+}
+.opb-root-border {
+	border: thin solid #c3c4c7;
+}

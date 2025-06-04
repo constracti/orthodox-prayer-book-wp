@@ -3,10 +3,10 @@
 if ( !defined( 'ABSPATH' ) )
 	exit;
 
-add_action( 'wp_ajax_nopriv_opb_api_1', function(): void {
-	$after = isset( $_GET['after'] ) ? intval( $_GET['after'] ) : 0;
+add_action( 'wp_ajax_nopriv_opb_api_data_1', function(): void {
+	$after = OPB_Request::get_int( 'after', TRUE ) ?? 0;
 	$after = wp_date( 'Y-m-d H:i:s', $after, new DateTimeZone( 'UTC' ) );
-	$now = current_time( 'timestamp', TRUE );
+	$now = OPB::now();
 	$date_query = [
 		[
 			'column' => 'post_modified_gmt',
@@ -32,7 +32,7 @@ add_action( 'wp_ajax_nopriv_opb_api_1', function(): void {
 			'title' => $post->post_title,
 			'excerpt' => $post->post_excerpt,
 			'modified' => $post->post_modified_gmt,
-			'leaf' => get_the_category( $post->ID )[0]->slug === 'prayers',
+			'leaf' => has_category( 'prayers', $post->ID ),
 		];
 	}, $post_list );
 	$meta_list = get_option( 'opb' );
