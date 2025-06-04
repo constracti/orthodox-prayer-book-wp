@@ -15,16 +15,17 @@
 if ( !defined( 'ABSPATH' ) )
 	exit;
 
+// TODO check before continuing
 // root has id 1
 // root is a category
 // root has no parents
-
 // other categories have at least one parent
-
 // prayers have at least one parent
-
 // parent is always a category
 // parent is an ancestor of root
+
+// TODO block category change
+// TODO handle post deletion
 
 
 final class OPB {
@@ -86,6 +87,50 @@ final class OPB {
 		$nonce = OPB_Request::get_str( 'nonce' );
 		if ( !wp_verify_nonce( $nonce, self::nonce_action( $action, ...$args ) ) )
 			exit( 'nonce' );
+	}
+
+	// option
+
+	public static function get_option(): array {
+		$meta = get_option( 'opb' );
+		$new = [
+			'meta_list' => [],
+			'timestamp' => self::now(),
+		];
+		if ( !is_array( $meta ) )
+			return $new;
+		if ( count( $meta ) !== 2 )
+			return $new;
+		if ( !isset( $meta['meta_list'] ) || !is_array( $meta['meta_list'] ) )
+			return $new;
+		if ( !isset( $meta['timestamp'] ) || !is_int( $meta['timestamp'] ) )
+			return $new;
+		return $meta;
+	}
+
+	public static function set_option( array $meta_list ): void {
+		$parent_list = [];
+		foreach ( $meta_list as $meta ) {
+			$parent = $meta['parent'];
+			if ( !isset( $parent_list[ $parent ] ) )
+				$parent_list[ $parent ] = [];
+			$parent_list[ $parent ][] = $meta;
+		}
+		foreach ( $parent_list as $parent => $meta_list ) {
+			usort( $meta_list, function( array $meta1, array $meta2 ): int {
+				return $meta1['order'] <=> $meta2['order'];
+			} );
+			$parent_list[ $parent ] = array_map( function( int $order, array $meta ): array {
+				$meta['order'] = $order;
+				return $meta;
+			}, array_keys( $meta_list ), $meta_list );
+		}
+		$meta_list = array_merge( ...$parent_list );
+		$meta = [
+			'meta_list' => $meta_list,
+			'timestamp' => self::now(),
+		];
+		update_option( 'opb', $meta );
 	}
 }
 

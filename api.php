@@ -35,7 +35,7 @@ add_action( 'wp_ajax_nopriv_opb_api_data_1', function(): void {
 			'leaf' => has_category( 'prayers', $post->ID ),
 		];
 	}, $post_list );
-	$meta_list = get_option( 'opb' );
+	$meta_list = OPB::get_option();
 	$meta_list = $meta_list['meta_list'];
 	$meta_list = array_map( function( array $meta ): array {
 		return [ $meta['parent'], $meta['child'], $meta['order'] ];
