@@ -223,14 +223,20 @@ final class OPB_Parents_Meta_Box {
 			exit( 'parent' );
 		if ( has_category( 'prayers', $parent->ID ) )
 			exit( 'parent' );
-		$order = OPB_Request::post_int( 'order' );
+		$order = OPB_Request::post_int( 'order', TRUE );
 		$meta_list = $meta['meta_list'];
-		$meta_list = array_map( function( array $meta ) use ( $post, $parent, $order ): array {
-			if ( $meta['parent'] !== $parent->ID || $meta['child'] !== $post->ID || $meta['order'] < $order )
+		if ( !is_null( $order ) ) {
+			$meta_list = array_map( function( array $meta ) use ( $post, $parent, $order ): array {
+				if ( $meta['parent'] !== $parent->ID || $meta['order'] < $order )
+					return $meta;
+				$meta['order']++;
 				return $meta;
-			$meta['order']++;
-			return $meta;
-		}, $meta_list );
+			}, $meta_list );
+		} else {
+			$order = count( array_filter( $meta_list, function( array $meta ) use ( $parent ): bool {
+				return $meta['parent'] === $parent->ID;
+			} ) );
+		}
 		$meta_list[] = [
 			'parent' => $parent->ID,
 			'child' => $post->ID,
@@ -273,7 +279,7 @@ final class OPB_Parents_Meta_Box {
 		if ( $timestamp !== $meta['timestamp'] )
 			exit( 'timestamp' );
 		$meta_list = array_values( array_filter( $meta['meta_list'], function( array $meta ) use ( $post, $parent, $order ): bool {
-			return !( $meta['parent'] === $parent->ID && $meta['child'] === $post->ID && $meta['order'] === $order );
+			return $meta['parent'] !== $parent->ID || $meta['child'] !== $post->ID || $meta['order'] !== $order;
 		} ) );
 		OPB::set_option( $meta_list );
 		OPB::success( self::home( $post ) );
