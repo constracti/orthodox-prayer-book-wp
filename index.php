@@ -92,45 +92,45 @@ final class OPB {
 	// option
 
 	public static function get_option(): array {
-		$meta = get_option( 'opb' );
+		$option = get_option( 'opb' );
 		$new = [
-			'meta_list' => [],
+			'edge_list' => [],
 			'timestamp' => self::now(),
 		];
-		if ( !is_array( $meta ) )
+		if ( !is_array( $option ) )
 			return $new;
-		if ( count( $meta ) !== 2 )
+		if ( count( $option ) !== 2 )
 			return $new;
-		if ( !isset( $meta['meta_list'] ) || !is_array( $meta['meta_list'] ) )
+		if ( !isset( $option['edge_list'] ) || !is_array( $option['edge_list'] ) )
 			return $new;
-		if ( !isset( $meta['timestamp'] ) || !is_int( $meta['timestamp'] ) )
+		if ( !isset( $option['timestamp'] ) || !is_int( $option['timestamp'] ) )
 			return $new;
-		return $meta;
+		return $option;
 	}
 
-	public static function set_option( array $meta_list ): void {
+	public static function set_option( array $edge_list ): void {
 		$parent_list = [];
-		foreach ( $meta_list as $meta ) {
-			$parent = $meta['parent'];
+		foreach ( $edge_list as $edge ) {
+			$parent = $edge['parent'];
 			if ( !isset( $parent_list[ $parent ] ) )
 				$parent_list[ $parent ] = [];
-			$parent_list[ $parent ][] = $meta;
+			$parent_list[ $parent ][] = $edge;
 		}
-		foreach ( $parent_list as $parent => $meta_list ) {
-			usort( $meta_list, function( array $meta1, array $meta2 ): int {
-				return $meta1['order'] <=> $meta2['order'];
+		foreach ( $parent_list as $parent => $edge_list ) {
+			usort( $edge_list, function( array $edge1, array $edge2 ): int {
+				return $edge1['order'] <=> $edge2['order'];
 			} );
-			$parent_list[ $parent ] = array_map( function( int $order, array $meta ): array {
-				$meta['order'] = $order;
-				return $meta;
-			}, array_keys( $meta_list ), $meta_list );
+			$parent_list[ $parent ] = array_map( function( int $order, array $edge ): array {
+				$edge['order'] = $order;
+				return $edge;
+			}, array_keys( $edge_list ), $edge_list );
 		}
-		$meta_list = array_merge( ...$parent_list );
-		$meta = [
-			'meta_list' => $meta_list,
+		$edge_list = array_merge( ...$parent_list );
+		$option = [
+			'edge_list' => $edge_list,
 			'timestamp' => self::now(),
 		];
-		update_option( 'opb', $meta );
+		update_option( 'opb', $option );
 	}
 }
 

@@ -41,9 +41,9 @@ final class OPB_Parents_Meta_Box {
 
 	private static function home( WP_Post $post ): string {
 		$ret = '';
-		$meta = OPB::get_option();
-		$meta_list = array_filter( $meta['meta_list'], function( array $meta ) use ( $post ): bool {
-			return $meta['child'] === $post->ID;
+		$option = OPB::get_option();
+		$edge_list = array_filter( $option['edge_list'], function( array $edge ) use ( $post ): bool {
+			return $edge['child'] === $post->ID;
 		} );
 		$title_dict = get_posts( [
 			'category_name' => 'prayers,categories',
@@ -62,17 +62,17 @@ final class OPB_Parents_Meta_Box {
 			}, array_keys( $title_dict ) ),
 		);
 		$count_dict = array_fill_keys( array_keys( $title_dict ), 0 );
-		foreach ( $meta['meta_list'] as $meta_item )
-			$count_dict[ $meta_item['parent'] ]++;
+		foreach ( $option['edge_list'] as $edge )
+			$count_dict[ $edge['parent'] ]++;
 		$ret .= '<div class="opb-table-home opb-flex-col opb-root" style="margin: -6px -12px -12px -12px;">' . "\n";
 		$ret .= '<div class="opb-flex-row opb-flex-justify-between opb-flex-align-center">' . "\n";
 		$ret .= self::refresh_button( $post );
 		$ret .= '<span class="opb-table-spinner opb-leaf spinner" data-opb-table-spinner-toggle="is-active"></span>' . "\n";
 		$ret .= '</div>' . "\n";
 		$ret .= '<hr class="opb-leaf">' . "\n";
-		$ret .= self::table( $post, $meta_list, $title_dict, $count_dict, $meta['timestamp'] );
+		$ret .= self::table( $post, $edge_list, $title_dict, $count_dict, $option['timestamp'] );
 		$ret .= '<div class="opb-flex-row">' . "\n";
-		$ret .= self::insert_button( $post, $meta['timestamp'] );
+		$ret .= self::insert_button( $post, $option['timestamp'] );
 		$ret .= '</div>' . "\n";
 		$ret .= self::form( $title_dict, $leaf_dict, $count_dict );
 		$ret .= '</div>' . "\n";
@@ -108,7 +108,7 @@ final class OPB_Parents_Meta_Box {
 		OPB::success( self::home( $post ) );
 	}
 
-	private static function table( WP_Post $post, array $meta_list, array $title_dict, array $count_dict, int $timestamp ): string {
+	private static function table( WP_Post $post, array $edge_list, array $title_dict, array $count_dict, int $timestamp ): string {
 		$ret = '';
 		$ret .= '<div class="opb-leaf">' . "\n";
 		$ret .= '<table class="fixed widefat striped">' . "\n";
@@ -116,9 +116,9 @@ final class OPB_Parents_Meta_Box {
 		$ret .= self::table_head_row();
 		$ret .= '</thead>' . "\n";
 		$ret .= '<tbody>' . "\n";
-		foreach ( $meta_list as $meta ) {
-			$parent = $meta['parent'];
-			$order = $meta['order'];
+		foreach ( $edge_list as $edge ) {
+			$parent = $edge['parent'];
+			$order = $edge['order'];
 			$ret .= self::table_body_row( $post, $parent, $title_dict[ $parent ], $count_dict[ $parent ], $order, $timestamp );
 		}
 		$ret .= '</tbody>' . "\n";
@@ -163,7 +163,7 @@ final class OPB_Parents_Meta_Box {
 
 	private static function form( array $title_dict, array $leaf_dict, array $count_dict ): string {
 		$ret = '';
-		$ret = '<div class="opb-table-form opb-table-form-meta opb-leaf opb-root opb-root-border opb-flex-col" style="display: none;">' . "\n";
+		$ret = '<div class="opb-table-form opb-table-form-edge opb-leaf opb-root opb-root-border opb-flex-col" style="display: none;">' . "\n";
 		$ret .= '<label class="opb-flex-row opb-flex-justify-between opb-flex-align-center">' . "\n";
 		$ret .= sprintf( '<span class="opb-leaf" style="width: 6em;">%s</span>', esc_html__( 'Parent', 'opb' ) ) . "\n";
 		$ret .= '<select class="opb-table-field opb-leaf opb-flex-grow" data-opb-table-name="parent" />' . "\n";
@@ -199,7 +199,7 @@ final class OPB_Parents_Meta_Box {
 				'nonce' => OPB::nonce_create( self::INSERT, $post->ID ),
 			], admin_url( 'admin-ajax.php' ) ),
 			'class' => 'opb-table-insert opb-leaf button',
-			'data-opb-table-form' => '.opb-table-form-meta',
+			'data-opb-table-form' => '.opb-table-form-edge',
 		] ), esc_html__( 'Insert', 'opb' ) ) . "\n";
 	}
 
@@ -214,9 +214,9 @@ final class OPB_Parents_Meta_Box {
 		if ( !current_user_can( 'edit_post', $post->ID ) )
 			exit( 'role' );
 		OPB::nonce_verify( self::INSERT, $post->ID );
-		$meta = OPB::get_option();
+		$option = OPB::get_option();
 		$timestamp = OPB_Request::get_int( 'timestamp' );
-		if ( $timestamp !== $meta['timestamp'] )
+		if ( $timestamp !== $option['timestamp'] )
 			exit( 'timestamp' );
 		$parent = OPB_Request::post_post( 'parent' );
 		if ( !has_category( 'categories', $parent->ID ) )
@@ -224,25 +224,25 @@ final class OPB_Parents_Meta_Box {
 		if ( has_category( 'prayers', $parent->ID ) )
 			exit( 'parent' );
 		$order = OPB_Request::post_int( 'order', TRUE );
-		$meta_list = $meta['meta_list'];
+		$edge_list = $option['edge_list'];
 		if ( !is_null( $order ) ) {
-			$meta_list = array_map( function( array $meta ) use ( $post, $parent, $order ): array {
-				if ( $meta['parent'] !== $parent->ID || $meta['order'] < $order )
-					return $meta;
-				$meta['order']++;
-				return $meta;
-			}, $meta_list );
+			$edge_list = array_map( function( array $edge ) use ( $post, $parent, $order ): array {
+				if ( $edge['parent'] !== $parent->ID || $edge['order'] < $order )
+					return $edge;
+				$edge['order']++;
+				return $edge;
+			}, $edge_list );
 		} else {
-			$order = count( array_filter( $meta_list, function( array $meta ) use ( $parent ): bool {
-				return $meta['parent'] === $parent->ID;
+			$order = count( array_filter( $edge_list, function( array $edge ) use ( $parent ): bool {
+				return $edge['parent'] === $parent->ID;
 			} ) );
 		}
-		$meta_list[] = [
+		$edge_list[] = [
 			'parent' => $parent->ID,
 			'child' => $post->ID,
 			'order' => $order,
 		];
-		OPB::set_option( $meta_list );
+		OPB::set_option( $edge_list );
 		OPB::success( self::home( $post ) );
 	}
 
@@ -274,14 +274,14 @@ final class OPB_Parents_Meta_Box {
 		$parent = OPB_Request::get_post( 'parent' );
 		$order = OPB_Request::get_int( 'order' );
 		OPB::nonce_verify( self::DELETE, $post->ID, $parent->ID, $order );
-		$meta = OPB::get_option();
+		$option = OPB::get_option();
 		$timestamp = OPB_Request::get_int( 'timestamp' );
-		if ( $timestamp !== $meta['timestamp'] )
+		if ( $timestamp !== $option['timestamp'] )
 			exit( 'timestamp' );
-		$meta_list = array_values( array_filter( $meta['meta_list'], function( array $meta ) use ( $post, $parent, $order ): bool {
-			return $meta['parent'] !== $parent->ID || $meta['child'] !== $post->ID || $meta['order'] !== $order;
+		$edge_list = array_values( array_filter( $option['edge_list'], function( array $edge ) use ( $post, $parent, $order ): bool {
+			return $edge['parent'] !== $parent->ID || $edge['child'] !== $post->ID || $edge['order'] !== $order;
 		} ) );
-		OPB::set_option( $meta_list );
+		OPB::set_option( $edge_list );
 		OPB::success( self::home( $post ) );
 	}
 }
