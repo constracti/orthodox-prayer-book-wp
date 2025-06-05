@@ -25,8 +25,6 @@ final class OPB_Parents_Meta_Box {
 			return;
 		if ( !has_category( [ 'prayers', 'categories' ], $post ) )
 			return;
-		if ( $post->ID === 1 )
-			return;
 		add_meta_box( 'opb_parents', __( 'Parents', 'opb' ), [ 'OPB_Parents_Meta_Box', 'home_echo' ], NULL, 'normal' );
 	}
 
@@ -40,11 +38,7 @@ final class OPB_Parents_Meta_Box {
 	}
 
 	private static function home( WP_Post $post ): string {
-		$ret = '';
 		$option = OPB::get_option();
-		$edge_list = array_filter( $option['edge_list'], function( array $edge ) use ( $post ): bool {
-			return $edge['child'] === $post->ID;
-		} );
 		$title_dict = get_posts( [
 			'category_name' => 'prayers,categories',
 			'nopaging' => TRUE,
@@ -64,13 +58,14 @@ final class OPB_Parents_Meta_Box {
 		$count_dict = array_fill_keys( array_keys( $title_dict ), 0 );
 		foreach ( $option['edge_list'] as $edge )
 			$count_dict[ $edge['parent'] ]++;
+		$ret = '';
 		$ret .= '<div class="opb-table-home opb-flex-col opb-root" style="margin: -6px -12px -12px -12px;">' . "\n";
 		$ret .= '<div class="opb-flex-row opb-flex-justify-between opb-flex-align-center">' . "\n";
 		$ret .= self::refresh_button( $post );
 		$ret .= '<span class="opb-table-spinner opb-leaf spinner" data-opb-table-spinner-toggle="is-active"></span>' . "\n";
 		$ret .= '</div>' . "\n";
 		$ret .= '<hr class="opb-leaf">' . "\n";
-		$ret .= self::table( $post, $edge_list, $title_dict, $count_dict, $option['timestamp'] );
+		$ret .= self::table( $post, $option, $title_dict, $count_dict );
 		$ret .= '<div class="opb-flex-row">' . "\n";
 		$ret .= self::insert_button( $post, $option['timestamp'] );
 		$ret .= '</div>' . "\n";
@@ -100,15 +95,13 @@ final class OPB_Parents_Meta_Box {
 			exit( 'post' );
 		if ( !has_category( [ 'prayers', 'categories' ], $post ) )
 			exit( 'post' );
-		if ( $post->ID === 1 )
-			exit( 'post' );
 		if ( !current_user_can( 'edit_post', $post->ID ) )
 			exit( 'role' );
 		OPB::nonce_verify( self::REFRESH, $post->ID );
 		OPB::success( self::home( $post ) );
 	}
 
-	private static function table( WP_Post $post, array $edge_list, array $title_dict, array $count_dict, int $timestamp ): string {
+	private static function table( WP_Post $post, array $option, array $title_dict, array $count_dict ): string {
 		$ret = '';
 		$ret .= '<div class="opb-leaf">' . "\n";
 		$ret .= '<table class="fixed widefat striped">' . "\n";
@@ -116,10 +109,12 @@ final class OPB_Parents_Meta_Box {
 		$ret .= self::table_head_row();
 		$ret .= '</thead>' . "\n";
 		$ret .= '<tbody>' . "\n";
-		foreach ( $edge_list as $edge ) {
+		foreach ( $option['edge_list'] as $edge ) {
+			if ( $edge['child'] !== $post->ID )
+				continue;
 			$parent = $edge['parent'];
 			$order = $edge['order'];
-			$ret .= self::table_body_row( $post, $parent, $title_dict[ $parent ], $count_dict[ $parent ], $order, $timestamp );
+			$ret .= self::table_body_row( $post, $parent, $title_dict[ $parent ], $count_dict[ $parent ], $order, $option['timestamp'] );
 		}
 		$ret .= '</tbody>' . "\n";
 		$ret .= '</table>' . "\n";
@@ -171,9 +166,6 @@ final class OPB_Parents_Meta_Box {
 		foreach ( $title_dict as $id => $title ) {
 			if ( $leaf_dict[ $id ] )
 				continue;
-			// TODO should be ancestor of root
-			// TODO limit to DAG
-			// TODO block edges with same vertices
 			$ret .= sprintf( '<option value="%d">%s</option>', $id, esc_html( sprintf( '%s (%d)', $title, $count_dict[ $id ] ) ) ) . "\n";
 		}
 		$ret .= '</select>' . "\n";
@@ -209,8 +201,6 @@ final class OPB_Parents_Meta_Box {
 			exit( 'post' );
 		if ( !has_category( [ 'prayers', 'categories' ], $post ) )
 			exit( 'post' );
-		if ( $post->ID === 1 )
-			exit( 'post' );
 		if ( !current_user_can( 'edit_post', $post->ID ) )
 			exit( 'role' );
 		OPB::nonce_verify( self::INSERT, $post->ID );
@@ -224,9 +214,11 @@ final class OPB_Parents_Meta_Box {
 		if ( has_category( 'prayers', $parent->ID ) )
 			exit( 'parent' );
 		$order = OPB_Request::post_int( 'order', TRUE );
+		if ( $order < 0 )
+			exit( 'order' );
 		$edge_list = $option['edge_list'];
 		if ( !is_null( $order ) ) {
-			$edge_list = array_map( function( array $edge ) use ( $post, $parent, $order ): array {
+			$edge_list = array_map( function( array $edge ) use ( $parent, $order ): array {
 				if ( $edge['parent'] !== $parent->ID || $edge['order'] < $order )
 					return $edge;
 				$edge['order']++;
@@ -266,8 +258,6 @@ final class OPB_Parents_Meta_Box {
 		if ( $post->post_type !== 'post' )
 			exit( 'post' );
 		if ( !has_category( [ 'prayers', 'categories' ], $post ) )
-			exit( 'post' );
-		if ( $post->ID === 1 )
 			exit( 'post' );
 		if ( !current_user_can( 'edit_post', $post->ID ) )
 			exit( 'role' );
