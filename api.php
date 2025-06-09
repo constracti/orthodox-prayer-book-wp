@@ -6,12 +6,12 @@ if ( !defined( 'ABSPATH' ) )
 // https://prayers.raktivan.gr/wp-admin/admin-ajax.php?action=opb_api_data_1
 add_action( 'wp_ajax_nopriv_opb_api_data_1', function(): void {
 	$after = OPB_Request::get_int( 'after', TRUE ) ?? 0;
-	$after = wp_date( 'Y-m-d H:i:s', $after, new DateTimeZone( 'UTC' ) );
+	$full = OPB_Request::get_str( 'full' ) === 'true';
 	$now = OPB::now();
 	$date_query = [
 		[
 			'column' => 'post_modified_gmt',
-			'after' => $after,
+			'after' => wp_date( 'Y-m-d H:i:s', $after, new DateTimeZone( 'UTC' ) ),
 			'inclusive' => TRUE,
 		],
 	];
@@ -25,22 +25,25 @@ add_action( 'wp_ajax_nopriv_opb_api_data_1', function(): void {
 		'nopaging' => TRUE,
 		'date_query' => $date_query,
 	] );
-	$node_list = array_map( function( WP_Post $post ): array {
+	$node_list = array_map( function( WP_Post $post ) use ( $full ): array {
 		return [
 			'id' => $post->ID,
 			'title' => $post->post_title,
 			'excerpt' => $post->post_excerpt,
-			'content' => $post->post_content,
+			'content' => $full ? $post->post_content : '',
 			'created' => $post->post_date_gmt,
 			'modified' => $post->post_modified_gmt,
 			'leaf' => has_category( 'prayers', $post->ID ),
 		];
 	}, $node_list );
-	$edge_list = OPB::get_option();
-	$edge_list = $edge_list['edge_list'];
-	$edge_list = array_map( function( array $edge ): array {
-		return [ $edge['parent'], $edge['child'], $edge['order'] ];
-	}, $edge_list );
+	$option = OPB::get_option();
+	if ( $option['timestamp'] > $after ) {
+		$edge_list = array_map( function( array $edge ): array {
+			return [ $edge['parent'], $edge['child'], $edge['order'] ];
+		}, $option['edge_list'] );
+	} else {
+		$edge_list = NULL;
+	}
 	header( 'content-type: application/json' );
 	exit( json_encode( [
 		'timestamp' => $now,
