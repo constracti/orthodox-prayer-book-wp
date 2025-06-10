@@ -17,14 +17,12 @@ if ( !defined( 'ABSPATH' ) )
 
 // TODO check before continuing
 // root has id 1
-// [root is a category]
+// root is a category
 // [root has no parents]
 // [other categories have at least one parent]
 // [prayers have at least one parent]
 // parent is always a category
 // [parent is an ancestor of root]
-
-// TODO block category change
 
 
 final class OPB {
