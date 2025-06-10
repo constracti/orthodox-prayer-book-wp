@@ -25,7 +25,6 @@ if ( !defined( 'ABSPATH' ) )
 // [parent is an ancestor of root]
 
 // TODO block category change
-// TODO handle post deletion
 
 
 final class OPB {
